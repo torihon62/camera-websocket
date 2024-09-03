@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" href="data:" />
+  </head>
+  <body>
+    <img id="img" />
+
+    <footer>
+      <!-- <a href=https://github.com/code4fukui/nekocam/>nekocam src on GitHub</a><br> -->
+    </footer>
+
+    <style>
+      body {
+        margin: 0;
+      }
+      img {
+        width: 100vw;
+      }
+      footer {
+        text-align: center;
+      }
+      footer a {
+        color: gray !important;
+      }
+    </style>
+
+    <script type="module">
+      import { createWebSocket } from "./createWebSocket.js";
+      import { encodeData } from "https://code4fukui.github.io/dataencoder/encodeData.js";
+
+      const group = location.hash.substring(1);
+
+      const start = () => {
+        const ws = createWebSocket();
+        ws.onopen = (e) => {
+          console.log("CONNECTED");
+          ws.send({ type: "init_client", group });
+        };
+        ws.onclose = (e) => {
+          console.log("DISCONNECTED");
+          setTimeout(start, 100); // restart
+        };
+        ws.onmessage = (e) => {
+          //console.log(`RECEIVED: ${e.data}`);
+          const t = e.data.type;
+          if (t == "cam_image") {
+            img.src = encodeData("image/jpeg", e.data.img);
+          }
+        };
+        ws.onerror = (e) => {
+          console.log(`ERROR: ${e.data}`);
+        };
+      };
+      start();
+    </script>
+  </body>
+</html>

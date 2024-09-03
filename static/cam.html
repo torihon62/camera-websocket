@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" href="data:" />
+  </head>
+  <body>
+    <video id="videoElement"></video>
+
+    <footer>
+      <!-- <a href=https://github.com/code4fukui/nekocam/>nekocam src on GitHub</a><br> -->
+    </footer>
+
+    <style>
+      body {
+        margin: 0;
+      }
+      video {
+        width: 100vw;
+      }
+      footer {
+        text-align: center;
+      }
+      footer a {
+        color: gray !important;
+      }
+    </style>
+
+    <script type="module">
+      import { createWebSocket } from "./createWebSocket.js";
+      import { Camera } from "https://code4fukui.github.io/Camera/Camera.js";
+      import { video2jpg } from "https://code4fukui.github.io/dataencoder/video2image.js";
+
+      const group = location.hash.substring(1);
+
+      const backcamera = false;
+      const camera = new Camera(videoElement, {
+        width: 1280,
+        height: 720,
+        backcamera,
+      });
+
+      const start = () => {
+        const ws = createWebSocket();
+        ws.onopen = (e) => {
+          console.log("CONNECTED");
+          ws.send({ type: "init_cam", group });
+        };
+        ws.onclose = (e) => {
+          console.log("DISCONNECTED");
+          setTimeout(start, 100); // restart
+        };
+        ws.onmessage = (e) => {
+          console.log(`RECEIVED: ${e.data}`);
+          const t = e.data.type;
+          if (t == "start_cam") {
+            camera.start();
+            camera.onFrame = async () => {
+              const s = video2jpg(videoElement, 0.7);
+              ws.send({ type: "cam_image", group, img: s });
+            };
+          } else if (t == "stop_cam") {
+            camera.stop();
+          }
+        };
+        ws.onerror = (e) => {
+          console.log(`ERROR: ${e.data}`);
+        };
+      };
+      start();
+    </script>
+  </body>
+</html>
